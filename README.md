@@ -32,7 +32,9 @@ A RESTful backend API for a finance dashboard system built with **Node.js**, **E
 finance-backend/
 ├── src/
 │   ├── config/
-│   │   └── db.js                  # MongoDB connection
+│   │   ├── db.js                  # MongoDB connection
+│   │   ├── rateLimit.js           # Rate limiting configuration
+│   │   └── swagger.js             # Swagger/OpenAPI spec
 │   ├── models/
 │   │   ├── User.js                # User schema (roles, status, bcrypt)
 │   │   └── Transaction.js         # Financial record schema
@@ -53,6 +55,10 @@ finance-backend/
 │   │   ├── ApiResponse.js         # Standardized responses
 │   │   └── constants.js           # Enums & config
 │   └── app.js                     # Express app setup
+├── tests/
+│   ├── setup.js                   # Test DB helper (in-memory MongoDB)
+│   ├── auth.test.js               # Auth integration tests
+│   └── transaction.test.js        # Transaction & dashboard tests
 ├── server.js                      # Entry point
 ├── seed.js                        # Database seeder
 ├── .env.example                   # Environment template
@@ -104,7 +110,13 @@ npm start
 
 5. **Test the API**
 ```
-Health check: GET http://localhost:5000/api/health
+Health check:     GET http://localhost:5000/api/health
+API Docs (Swagger): http://localhost:5000/api/docs
+```
+
+6. **Run tests**
+```bash
+npm test
 ```
 
 ### Seed Credentials
@@ -355,11 +367,60 @@ HTTP status codes used:
 - Pagination on list endpoints with metadata (`totalPages`, `hasNextPage`, etc.)
 - Query parameter-based filtering rather than POST body for GET requests
 
+##  Security Features
+
+### Rate Limiting
+- **General API**: 100 requests per 15-minute window per IP
+- **Auth endpoints**: Stricter limit of 20 requests per 15-minute window (protects against brute-force login attempts)
+- Returns `429 Too Many Requests` with descriptive message when limit is exceeded
+- Configured via `express-rate-limit` with standard `RateLimit-*` response headers
+
+### NoSQL Injection Protection
+- Request body, params, and query are sanitized via `express-mongo-sanitize`
+- Strips `$` and `.` operators from user input to prevent MongoDB operator injection
+
+### Other Security Measures
+- `helmet` — sets secure HTTP headers
+- `cors` — configures Cross-Origin Resource Sharing
+- `express.json({ limit: '10kb' })` — prevents large payload attacks
+- Password hashing — bcrypt with 12 salt rounds
+- JWT secret rotation via separate access/refresh token secrets
+
+##  API Documentation (Swagger)
+
+Interactive API documentation is available at:
+```
+http://localhost:5000/api/docs
+```
+
+- Auto-generated from JSDoc annotations in route files
+- Try out endpoints directly in the browser
+- Includes request/response schemas, examples, and authentication
+- Built with `swagger-jsdoc` + `swagger-ui-express`
+
+##  Testing
+
+The project uses **Jest** + **Supertest** with **mongodb-memory-server** for isolated integration tests.
+
+```bash
+npm test
+```
+
+### Test Coverage
+
+| Suite | Tests | What's covered |
+|-------|-------|----------------|
+| Auth | 14 | Register (success, duplicate, validation), Login (success, wrong password, inactive), Refresh token, Profile, Logout |
+| Transactions | 12 | CRUD operations, RBAC enforcement (admin/analyst/viewer), Pagination, Filtering, Soft delete + restore |
+| Dashboard | 5 | Summary totals, Category breakdown, Monthly trends, Recent activity, Role-based access |
+
+### Test Architecture
+- **In-memory MongoDB**: Tests run against `mongodb-memory-server` — no real database needed
+- **Isolated**: Each test suite connects/disconnects independently, data is cleared between tests
+- **Integration-level**: Tests hit actual Express routes via Supertest, validating the full middleware chain
+
 ##  Future Enhancements
 
-- Rate limiting with express-rate-limit
-- Unit and integration tests with Jest
-- API documentation with Swagger/OpenAPI
 - File upload for receipt attachments
 - Budget tracking and alerts
 - Export data to CSV/PDF

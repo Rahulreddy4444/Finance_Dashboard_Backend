@@ -9,9 +9,9 @@ export const errorHandler = (err, req, res, next) => {
   error.message = err.message;
   error.stack = err.stack;
 
-  // Log error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', err);
+  // Log error in development or test for debugging
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    console.error('Error in test:', err);
   }
 
   // ─── Mongoose Bad ObjectId ──────────────────────────────

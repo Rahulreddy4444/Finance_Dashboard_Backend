@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoSanitize from 'express-mongo-sanitize';
+import swaggerUi from 'swagger-ui-express';
+
+// Config imports
+import swaggerSpec from './config/swagger.js';
+import { apiLimiter, authLimiter } from './config/rateLimit.js';
 
 // Route imports
 import authRoutes from './routes/auth.routes.js';
@@ -22,10 +28,25 @@ app.use(cors());
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// ─── NoSQL Injection Protection ──────────────────────────────
+app.use(mongoSanitize());
+
+// ─── Rate Limiting ───────────────────────────────────────────
+if ((process.env.NODE_ENV || '').trim() !== 'test') {
+  app.use('/api', apiLimiter);
+  app.use('/api/auth', authLimiter);
+}
+
 // ─── Logging ─────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
+
+// ─── API Documentation ──────────────────────────────────────
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Finance API Documentation',
+}));
 
 // ─── Health Check ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -33,6 +54,7 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'Finance Backend API is running',
     timestamp: new Date().toISOString(),
+    docs: '/api/docs',
   });
 });
 

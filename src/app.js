@@ -29,6 +29,17 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── NoSQL Injection Protection ──────────────────────────────
+// Express 5 makes req.query immutable, which breaks express-mongo-sanitize. 
+// We must make it writable before the sanitization middleware runs.
+app.use((req, res, next) => {
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query },
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+  next();
+});
 app.use(mongoSanitize());
 
 // ─── Rate Limiting ───────────────────────────────────────────

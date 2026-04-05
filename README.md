@@ -2,6 +2,11 @@
 
 A RESTful backend API for a finance dashboard system built with **Node.js**, **Express**, and **MongoDB**. Features user authentication, role-based access control (RBAC), financial record management, and dashboard analytics.
 
+## Demo Video
+
+> **[Watch the full Demo & Code Walkthrough Video Here](https://drive.google.com/file/d/1syi1wMkQbhIkozNp88sk97TrER2bOLJX/view?usp=drive_link)**
+
+---
 ##  Table of Contents
 
 - [Tech Stack](#tech-stack)
